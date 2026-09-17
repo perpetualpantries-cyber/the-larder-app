@@ -148,11 +148,13 @@ export default function LarderApp() {
             setArtifactFilter={setArtifactFilter}
             reload={reload}
           />
+        ) : view === "keeper" ? (
+          <KeeperPage navigate={navigate} reload={reload} />
         ) : (
           <CategoryPage catId={view} facts={factsFor(view)} navigate={navigate} reload={reload} />
         )}
       </main>
-      <Composer navigate={navigate} reload={reload} />
+      {view === "keeper" ? null : <Composer navigate={navigate} reload={reload} />}
     </div>
   );
 }
@@ -313,12 +315,18 @@ function Overview({ facts, tasks, artifacts, navigate, reload }) {
             {g.items.map((id) => {
               const c = CATS[id];
               const count =
-                id === "tasks" ? open.length : id === "artifacts" ? artifacts.length : facts.filter((f) => f.category === id).length;
+                id === "keeper"
+                  ? null
+                  : id === "tasks"
+                  ? open.length
+                  : id === "artifacts"
+                  ? artifacts.length
+                  : facts.filter((f) => f.category === id).length;
               return (
                 <button key={id} className="tile" onClick={() => navigate(id)}>
                   <div className="tile-top">
                     <h3>{c.label}</h3>
-                    <span className="count">{count}</span>
+                    {count !== null ? <span className="count">{count}</span> : null}
                   </div>
                   <p>{c.blurb}</p>
                 </button>
@@ -776,6 +784,89 @@ function ArtifactsPage({ artifacts, navigate, artifactFilter, setArtifactFilter,
   );
 }
 
+function KeeperPage({ navigate, reload }) {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function send(e) {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text || busy) return;
+    setError("");
+    const nextDisplay = [...messages, { role: "user", content: text }];
+    setMessages(nextDisplay);
+    setInput("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/keeper", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [...messages.map((m) => ({ role: m.role, content: m.content })), { role: "user", content: text }],
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || "Keeper couldn't respond just now.");
+        setBusy(false);
+        return;
+      }
+      const data = await res.json();
+      setMessages([...nextDisplay, { role: "assistant", content: data.reply }]);
+      reload();
+    } catch {
+      setError("Something went wrong reaching Keeper — try again.");
+    }
+    setBusy(false);
+  }
+
+  return (
+    <>
+      <div className="cat-header">
+        <button className="back" onClick={() => navigate("overview")}>
+          <IconBack />
+          Overview
+        </button>
+        <h1>Keeper</h1>
+        <p>Ask it to look something up, or tell it to add, edit, or remove things in your Larder.</p>
+      </div>
+
+      <div className="keeper-thread">
+        {messages.length === 0 ? (
+          <div className="empty-note">
+            Try: &quot;What&apos;s outstanding on Perpetual Pantries?&quot; or &quot;Add a task to call the accountant.&quot;
+          </div>
+        ) : (
+          messages.map((m, i) => (
+            <div key={i} className={"keeper-msg " + (m.role === "user" ? "from-josh" : "from-keeper")}>
+              <div className="keeper-msg-role">{m.role === "user" ? "You" : "Keeper"}</div>
+              <div className="keeper-msg-text">{typeof m.content === "string" ? m.content : ""}</div>
+            </div>
+          ))
+        )}
+        {busy ? <div className="keeper-msg from-keeper"><div className="keeper-msg-role">Keeper</div><div className="keeper-msg-text">Thinking…</div></div> : null}
+      </div>
+
+      {error ? <div className="keeper-error">{error}</div> : null}
+
+      <form className="keeper-input-row" onSubmit={send}>
+        <input
+          type="text"
+          placeholder="Ask Keeper…"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          disabled={busy}
+        />
+        <button type="submit" disabled={busy || !input.trim()}>
+          <IconSend />
+        </button>
+      </form>
+    </>
+  );
+}
+
 function Composer({ navigate, reload }) {
   const [category, setCategory] = useState("josh");
   const [text, setText] = useState("");
@@ -807,7 +898,7 @@ function Composer({ navigate, reload }) {
     <form className="composer" onSubmit={submit}>
       <div className="composer-inner">
         <select value={category} onChange={(e) => setCategory(e.target.value)} aria-label="Category">
-          {GROUPS.filter((g) => g.label !== "Tasks" && g.label !== "Artifacts").map((g) => (
+          {GROUPS.filter((g) => g.label !== "Tasks" && g.label !== "Artifacts" && g.label !== "Keeper").map((g) => (
             <optgroup key={g.label} label={g.label}>
               {g.items.map((id) => (
                 <option key={id} value={id}>

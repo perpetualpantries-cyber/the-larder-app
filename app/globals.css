@@ -249,4 +249,28 @@ form.composer{
 .composer-inner button svg{ width:15px; height:15px; }
 .composer-hint{ text-align:center; font-family:"IBM Plex Mono", monospace; font-size:10px; color:var(--muted); margin-top:6px; }
 
+.keeper-thread{ display:flex; flex-direction:column; gap:10px; margin-bottom:80px; }
+.keeper-msg{ max-width:88%; border-radius:14px; padding:10px 13px; }
+.keeper-msg.from-josh{ align-self:flex-end; background:var(--accent); color:#fff; }
+.keeper-msg.from-keeper{ align-self:flex-start; background:var(--surface); border:1px solid var(--border); }
+.keeper-msg-role{ font-family:"IBM Plex Mono", monospace; font-size:10px; text-transform:uppercase; letter-spacing:.05em; opacity:.6; margin-bottom:3px; }
+.keeper-msg-text{ white-space:pre-wrap; word-wrap:break-word; }
+.keeper-error{ color:var(--danger); font-size:13px; padding:8px 2px; }
+.keeper-input-row{
+  position:fixed; left:0; right:0; bottom:0; z-index:40;
+  background:linear-gradient(180deg, transparent, var(--bg) 24%);
+  padding:18px 16px 14px;
+  display:flex; align-items:center; gap:6px; max-width:808px; margin:0 auto;
+}
+.keeper-input-row input{
+  flex:1; min-width:0; border:1px solid var(--border); outline:none; background:var(--surface); color:var(--ink);
+  font:inherit; padding:10px 12px; border-radius:12px;
+}
+.keeper-input-row button{
+  flex:none; width:34px; height:34px; border-radius:11px; border:none; background:var(--accent); color:#fff;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+.keeper-input-row button:disabled{ opacity:.4; cursor:default; }
+.keeper-input-row button svg{ width:15px; height:15px; }
+
 [hidden]{ display:none !important; }
