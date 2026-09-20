@@ -150,11 +150,13 @@ export default function LarderApp() {
           />
         ) : view === "keeper" ? (
           <KeeperPage navigate={navigate} reload={reload} />
+        ) : view === "brief" ? (
+          <BriefPage navigate={navigate} />
         ) : (
           <CategoryPage catId={view} facts={factsFor(view)} navigate={navigate} reload={reload} />
         )}
       </main>
-      {view === "keeper" ? null : <Composer navigate={navigate} reload={reload} />}
+      {view === "keeper" || view === "brief" ? null : <Composer navigate={navigate} reload={reload} />}
     </div>
   );
 }
@@ -315,7 +317,7 @@ function Overview({ facts, tasks, artifacts, navigate, reload }) {
             {g.items.map((id) => {
               const c = CATS[id];
               const count =
-                id === "keeper"
+                id === "keeper" || id === "brief"
                   ? null
                   : id === "tasks"
                   ? open.length
@@ -863,6 +865,74 @@ function KeeperPage({ navigate, reload }) {
           <IconSend />
         </button>
       </form>
+    </>
+  );
+}
+
+function IconRefresh() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" />
+    </svg>
+  );
+}
+
+function BriefPage({ navigate }) {
+  const [text, setText] = useState("");
+  const [generatedAt, setGeneratedAt] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+
+  const load = useCallback(async (opts) => {
+    const method = opts && opts.refresh ? "POST" : "GET";
+    if (method === "POST") setRefreshing(true);
+    setError("");
+    try {
+      const res = await fetch("/api/brief", { method });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Couldn't generate the brief just now.");
+      } else {
+        setText(data.text);
+        setGeneratedAt(data.generatedAt);
+      }
+    } catch {
+      setError("Something went wrong reaching Keeper — try again.");
+    }
+    setLoading(false);
+    setRefreshing(false);
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return (
+    <>
+      <div className="cat-header">
+        <button className="back" onClick={() => navigate("overview")}>
+          <IconBack />
+          Overview
+        </button>
+        <h1>Morning Brief</h1>
+        <p>What&apos;s outstanding and what&apos;s new, written by Keeper.</p>
+      </div>
+
+      {loading ? (
+        <div className="loading">Writing today&apos;s brief…</div>
+      ) : error ? (
+        <div className="keeper-error">{error}</div>
+      ) : (
+        <div className="brief-card">
+          <div className="brief-text">{text}</div>
+          {generatedAt ? <div className="brief-when">Generated {fmtWhen(generatedAt)}</div> : null}
+        </div>
+      )}
+
+      <button className="completed-toggle" disabled={refreshing} onClick={() => load({ refresh: true })}>
+        <IconRefresh /> {refreshing ? "Refreshing…" : "Refresh brief"}
+      </button>
     </>
   );
 }
